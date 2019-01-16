@@ -102,8 +102,8 @@ for row, col in cat_combos:
     print("Row Percents: \n",pd.crosstab(titanic_df[row], titanic_df[col], normalize="index"), "\n")
     print("Column Percents: \n", pd.crosstab(titanic_df[row], titanic_df[col], normalize="columns"),"\n---------------\n")
     
-import seaborn as sns
-sns.heatmap(titanic_df[numeric].corr(), cmap = "coolwarm");
+#import seaborn as sns
+#sns.heatmap(titanic_df[numeric].corr(), cmap = "coolwarm");
 
 
 # III - Coding Logistic Regression
@@ -206,7 +206,7 @@ def sigmoid_single(x, y, w):
         print(sig2) #--> 1
     """
     arg = np.dot(np.dot(y,np.transpose(x)), w)
-    return np.exp(arg) if arg < 709.782 else 1
+    return (np.exp(arg) / (1+np.exp(arg))) if arg < 709.782 else 1
 
 
 x = np.array([23.0,75])
@@ -270,7 +270,7 @@ def sum_all(x_input, y_target, w):
         print(sum_all(x,y,w)) #--> array([-0.33737816, -7.42231958, -2.44599168])
         
     """
-    total = np.zeros_like(x_input)
+    total = np.zeros(x_input.shape[1])
     for i,x in enumerate(x_input):
         total += to_sum(x, y[i], w)
     return total
@@ -280,3 +280,116 @@ x = np.array([[1,22,7.25],[1,38,71.2833]])
 y = np.array([-1,1])
 w = np.array([.1,-.2, .5])
 print(sum_all(x,y,w)) #--> array([-0.33737816, -7.42231958, -2.44599168])
+
+
+### GRADED
+### YOUR ANSWER BELOW
+def update_w(x_input, y_target, w, eta):
+    """Obtain and return updated Logistic Regression weights
+    
+    Arguments:
+        x_input - *preprocessed* an array of shape n-by-d
+        y_target - *preprocessed* a vector of length n
+        w - a vector of length d
+        eta - a float, positive, close to 0
+        
+    Example:
+        x = np.array([[1,22,7.25],[1,38,71.2833]])
+        y = np.array([-1,1])
+        w = np.array([.1,-.2, .5])
+        eta = .1
+        
+        print(update_w(x,y,w, eta)) #--> array([ 0.06626218, -0.94223196,  0.25540083])
+"""
+    w += eta * sum_all(x_input,y_target,w)
+    return w
+
+x = np.array([[1,22,7.25],[1,38,71.2833]])
+y = np.array([-1,1])
+w = np.array([.1,-.2, .5])
+eta = .1
+
+print(update_w(x,y,w, eta)) #--> array([ 0.06626218, -0.94223196,  0.25540083])
+
+
+### GRADED
+### Follow directions above
+### YOUR ANSWER BELOW
+
+def fixed_iteration(x_input, y_target, eta, steps):
+    
+    """
+    Return weights calculated from 'steps' number of steps of gradient descent.
+    
+    Arguments:
+        x_input - *NOT-preprocessed* an array
+        y_target - *NOT-preprocessed* a vector of length n
+        eta - a float, positve, close to 0
+        steps - an int
+        
+    Example:
+        x = np.array([[22,7.25],[38,71.2833],[26,7.925],[35,53.1]])
+        y = np.array([-1,1,1,1])
+        eta = .1
+        steps = 100
+        
+        print(fixed_iteration(x,y, eta, steps)) #--> np.array([-0.9742495,  -0.41389924, 6.8199374 ])
+    
+    """
+    x, y, w = prepare_data(x_input, y_target)
+    for step in range(steps):
+        w = update_w(x,y,w,eta)
+    return w
+
+x = np.array([[22,7.25],[38,71.2833],[26,7.925],[35,53.1]])
+y = np.array([-1,1,1,1])
+eta = .1
+steps = 100
+
+print(fixed_iteration(x,y, eta, steps)) #--> np.array([-0.9742495,  -0.41389924, 6.8199374 ])
+
+
+### GRADED
+### Follow Directions Above
+### YOUR ANSWER BELOW
+def predict(x_input, weights):
+    """
+    Return the label prediction, 1 or -1 (an integer), for the given x_input and LR weights.
+    
+    Arguments:
+        x_input - *NOT-preprocessed* a vector of length d-1
+        weights - a vector of length d
+               
+    Example:
+        Xs = np.array([[22,7.25],[38,71.2833],[26,7.925],[35,53.1]])
+        weights = np.array([0,1,-1])
+        
+        for X in Xs:
+            print(predict(X,weights))
+            #-->     1
+                    -1
+                     1
+                    -1
+    """
+#    # 1 - Preprocess X
+#    # Transpose if necessary
+#    n,d = x_input.shape
+#    if d > n: 
+#        print('Transposing input matrix - n must be >> d')
+#        x_input = x_input.T
+#        n,d = x_input.shape
+#        
+#    # Add bias
+    X = np.concatenate((np.ones(1), x_input))
+    return 1 if X.T @ weights > 0 else -1
+
+
+Xs = np.array([[22,7.25],[38,71.2833],[26,7.925],[35,53.1]])
+weights = np.array([0,1,-1])
+
+for X in Xs:
+    print(predict(X,weights))
+#    #-->     1
+#            -1
+#             1
+#            -1
