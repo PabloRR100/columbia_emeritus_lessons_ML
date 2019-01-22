@@ -162,7 +162,6 @@ print(entropy(3,1)) # --> 0.8112781244591328
 ### YOUR ANSWER BELOW
 
 def ent_from_split(col, split_value, labels):
-    
     """
     Calculate the entropy of a split.
     
@@ -176,32 +175,151 @@ def ent_from_split(col, split_value, labels):
     Example:
         col = np.array([1,1,2,2,3,3,4])
         split = 2.5
-        labels = np.array([0,1,0,0,1,0,1])
-        
+        labels = np.array([0,1,0,0,1,0,1])        
         ent = ent_from_split(col, split, labels)
-        
         print(ent) # --> 0.8571428571428571
-    
     """
     idx_n1, idx_n2 = col <= split_value, col > split_value
     node1_x, node2_x = col[idx_n1], col[idx_n2]
     node1_y, node2_y = labels[idx_n1], labels[idx_n2]
     
-    p_node1 = 0
-    p_node2 = 0
+    p_node1 = len(node1_x) / len(col)
+    p_node2 = len(node2_x) / len(col)
+    assert p_node1 + p_node2 == 1
     
-    ent_node1 = 0
-    ent_node2 = 0
-    ent = float(p_node1*ent_node1 + p_node2*ent_node2)
-    
-    return ent
+    ent_node1 = entropy(sum(node1_y == 0), sum(node1_y == 1))
+    ent_node2 = entropy(sum(node2_y == 0), sum(node2_y == 1))
+    return float(p_node1*ent_node1 + p_node2*ent_node2)
 
 col = np.array([1,1,2,2,3,3,4])
 split = 2.5
-split_value = 2.5
 labels = np.array([0,1,0,0,1,0,1])
-
 ent = ent_from_split(col, split, labels)
-
 print(ent) # --> 0.8571428571428571
 
+
+# PART III - PREDICT FROM THE OBSERVED MAJORITY CLASS AT EACH NODE
+# ----------------------------------------------------------------
+
+
+### GRADED
+### Code a function called `pred_from_split`
+### ACCEPT four inputs:
+### 1. a numpy array of observations
+### 2. a numpy array of labels: 0's and 1's
+### 3. a column index
+### 4. a value to split that column specified by the index
+
+### RETURN a tuple of (left_pred, right_pred) where:
+### left_pred is the majority class of labels where observations are <= split_value
+### right_pred is the majority class of labels where observations are > split_value
+
+### If the split yeilds equal number of observations of each class in BOTH nodes,
+### ### let both `left_pred` and `right_pred` be 1.
+### If the split yeilds equal number of observations of each class in ONLY ONE node,
+### ### predict the opposite of the other node. e.g.
+
+### ### node 1    |   node 2
+### ###  c1  | c2 |  c1 | c2
+### ###  5  | 4   |  3  |  3
+
+### The prediction for node 1 would be "class 1".
+### Because of the equal numbers of each class in node 2,
+### the prediction for node 2 would be the opposite of the node 1 prediction.
+### e.g. the prediction for node 2 would be "class 2"
+
+### YOUR ANSWER BELOW
+
+def pred_from_split(X, y, col_idx, split_value):
+    """
+    Return predictions for the nodes defined by the given split.
+    
+    Positional argument:
+        X -- a 2-dimensional numpy array of predictor variable observations.
+            rows are observations, columns are features.
+        y -- a 1-dimensional numpy array of labels, associated with observations
+             in X.
+        col_idx -- an integer index, such that X[:,col_idx] yeilds all the observations
+            of a single feature.
+        split_value -- a numeric split, such that the values of X[:,col_idx] that are
+            <= split_value are in the left node. Those > split_value are in the right node.
+    """    
+    col = X[:,col_idx]
+    idx_n1, idx_n2 = col <= split_value, col > split_value
+    node1_y, node2_y = y[idx_n1], y[idx_n2]
+    
+    node1_c1, node1_c2 = sum(node1_y == 0), sum(node1_y == 1)
+    node2_c1, node2_c2 = sum(node2_y == 0), sum(node2_y == 1)
+    
+    if node1_c1 == node1_c2:
+        right_pred = 0 if node2_c1 > node2_c2 else 1
+        left_pred = 1 - right_pred
+    
+    elif node2_c1 == node2_c2:
+        left_pred = 0 if node1_c1 > node2_c2 else 1
+        right_pred = 1 - left_pred
+        
+    else:
+        left_pred = 0 if node1_c1 > node2_c2 else 1
+        right_pred = 0 if node2_c1 > node2_c2 else 1
+    
+    return (left_pred, right_pred)
+
+
+X = np.array([[0.5, 3. ], [1.,  2. ], [3.,  0.5], [2.,  3. ], [3.,  4. ]])    
+y = np.array([ 1, 1, 0, 0, 1])
+col_idx = 0
+split_value = 1.5
+pred_at_nodes = pred_from_split(X, y, col_idx, split_value)
+print(pred_at_nodes) # --> (1, 0)
+
+
+### GRADED
+### Code a function called "simple_binary_tree_predict"
+### ACCEPT five inputs:
+### 1. A numpy array of observations
+### 2. A column index
+### 3. A value to split the column specified by the index
+### 4/5. Two values, 1 or 0, denoting the predictions at left and right nodes
+
+### RETURN a numpy array of predictions for each observation
+
+### Predictions are created for each row in x:
+### 1. For a row in X, find the value in the "col_idx" column
+### 2. Compare to "split_value"
+### 3. If <= "split_value", predict "left_pred"
+### 4. Else predict "right_pred"
+
+### YOUR ANSWER BELOW
+
+def simple_binary_tree_predict(X, col_idx, split_value, left_pred, right_pred):
+    """
+    Create an array of predictions built from: observations in one column of X,
+        a given split value, and given predictions for when observations
+        are less-than-or-equal-to that split or greater-than that split value
+        
+    Positional arguments:
+        X -- a 2-dimensional numpy array of predictor variable observations.
+            rows are observations, columns are different features
+        col_idx -- an integer index, such that X[:,col_idx] yeilds all the observations
+            in a single feature.
+        split_value -- a numeric split, such that the values of X[:,col_idx] that are
+            <= split_value are in the left node, and those > are in the right node.   
+        left_pred -- class (0 or 1), that is predicted when observations
+            are less-than-or-equal-to the split value
+        right_pred -- class (0 or 1), that is predicted when observations
+            are greater-than the split value
+            
+    """
+    
+    return np.array([])   
+
+
+X = np.array([[0.5, 3. ], [1.,  2. ], [3.,  0.5], [2.,  3. ], [3.,  4. ]])
+col_idx = 0
+split_value = 1.5
+left_pred = 1
+right_pred = 0
+preds = simple_binary_tree_predict(X, col_idx, split_value, left_pred, right_pred)
+
+print(preds) #--> np.array([1,1,0,0,0])
