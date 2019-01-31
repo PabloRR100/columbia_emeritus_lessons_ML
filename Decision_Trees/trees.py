@@ -47,3 +47,5 @@ ger = [[110,  60], [285, 390]]
 gini_coef(ame)
 gini_coef(ger)
 
+
+

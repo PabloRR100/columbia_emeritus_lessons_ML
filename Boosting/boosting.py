@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jan 22 08:48:41 2019
@@ -311,8 +311,10 @@ def simple_binary_tree_predict(X, col_idx, split_value, left_pred, right_pred):
             are greater-than the split value
             
     """
-    
-    return np.array([])   
+    col = X[:,col_idx]
+    idx_n1, idx_n2 = col <= split_value, col > split_value
+    col[idx_n1], col[idx_n2] = left_pred, right_pred
+    return col
 
 
 X = np.array([[0.5, 3. ], [1.,  2. ], [3.,  0.5], [2.,  3. ], [3.,  4. ]])
