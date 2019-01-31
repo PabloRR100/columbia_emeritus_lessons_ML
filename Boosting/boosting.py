@@ -288,7 +288,7 @@ print(pred_at_nodes) # --> (1, 0)
 ### 1. For a row in X, find the value in the "col_idx" column
 ### 2. Compare to "split_value"
 ### 3. If <= "split_value", predict "left_pred"
-### 4. Else predict "right_pred"
+### 4. Else predict "right_pred"x
 
 ### YOUR ANSWER BELOW
 
