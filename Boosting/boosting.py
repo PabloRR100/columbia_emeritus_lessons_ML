@@ -325,3 +325,147 @@ right_pred = 0
 preds = simple_binary_tree_predict(X, col_idx, split_value, left_pred, right_pred)
 
 print(preds) #--> np.array([1,1,0,0,0])
+
+
+### ADABOOST
+# ----------
+
+### This helper function will return an instance of a `DecisionTreeClassifier` with
+### our specifications - split on entropy, and grown to depth of 1.
+from sklearn.tree import DecisionTreeClassifier
+
+def simple_tree():
+    return DecisionTreeClassifier(criterion = 'entropy', max_depth= 1)
+
+
+### Our example dataset, inspired from lecture
+pts = [[.5, 3,1],[1,2,1],[3,.5,-1],[2,3,-1],[3,4,1],
+ [3.5,2.5,-1],[3.6,4.7,1],[4,4.2,1],[4.5,2,-1],[4.7,4.5,-1]]
+
+df = pd.DataFrame(pts, columns = ['x','y','classification'])
+
+# Plotting by category
+
+b = df[df.classification ==1]
+r = df[df.classification ==-1]
+plt.figure(figsize = (4,4))
+plt.scatter(b.x, b.y, color = 'b', marker="+", s = 400)
+plt.scatter(r.x, r.y, color = 'r', marker = "o", s = 400)
+plt.title("Categories Denoted by Color/Shape")
+plt.show()
+
+
+print("df:\n",df, "\n")
+
+### split out X and y
+X = df[['x','y']]
+
+# Change from -1 and 1 to 0 and 1
+y = np.array([1 if x == 1 else 0 for x in df['classification']])
+
+### Split data in half
+X1 = X.iloc[:len(X.index)//2, :]
+X2 = X.iloc[len(X.index)//2:, :]
+
+y1 = y[:len(y)//2]
+y2 = y[len(X)//2:]
+
+
+### Fit classifier to both sets of data, save to dictionary:
+
+tree_dict = {}
+
+tree1 = simple_tree()
+tree1.fit(X1,y1)
+print("threshold:", tree1.tree_.threshold[0], "feature:", tree1.tree_.feature[0])
+
+### made up alpha, for example
+alpha1 = .6
+tree_dict[1] = (tree1, alpha1)
+
+tree2 = simple_tree()
+tree2.fit(X2,y2)
+print("threshold:", tree2.tree_.threshold[0], "feature:" ,tree2.tree_.feature[0])
+
+### made up alpha, again.
+alpha2 = .35
+
+tree_dict[2] = (tree2, alpha2)
+
+### Create predictions using trees stored in dictionary
+print("\ntree1 predictions on all elements:", tree_dict[1][0].predict(X))
+print("tree2 predictions on all elements:", tree_dict[2][0].predict(X))
+
+### Showing Ent
+print("\nEntropy of different splits for observations 5-9")
+print("Col 1, @ 3.35:", ent_from_split(X2.iloc[:,1].values,3.35, y2))
+print("Col 0, # 4.25:", ent_from_split(X2.iloc[:,0].values, 4.25, y2))
+
+
+      
+### ADABOOST
+### --------
+
+'''
+Building Adaptive Boosting
+Below Gives the outline of the fitting process for the adaptive boosting algorithm.
+
+Again, the functions next to "###<------" will be created in the exercises below. They include:
+
+default_weights()
+calc_epsilon()
+calc_alpha()
+update_weights()
+'''
+
+def simple_adaboost_fit(X,y, n_estimators):
+    """
+    Positional arguments :
+        X -- a numpy array of numeric observations:
+            rows are observations, columns are features
+        y -- a numpy array of binary labels:
+            *Assume labels are 1 for "True" and 0 for "False"*
+        estimator -- a model capable of binary classification, implementing
+            the `.fit()` and `.predict()` methods.
+        n_estimators -- The number of estimators to fit.
+
+    Steps:
+        1. Create probability weights for selection during boot-straping.
+        2. Create boot-strap sample of observations according to weights
+        3. Fit estimator model with boot-strap sample.
+        4. Calculate model error: epsilon
+        5. Calculate alpha to associate with model
+        6. Re-calculate probability weights
+        7. Repeat 2-6 unil creation of n_estimators models. 
+
+    """
+    
+    def simple_tree():
+        return DecisionTreeClassifier(criterion = 'entropy', max_depth= 1)
+    
+    # Create default weights array where all are equal to 1/n
+    weights = default_weights(len(y)) ### <------
+    
+    est_dict = {}
+    for i in range(n_estimators):
+        # Create bootstrap sample
+        bs_X, bs_y = boot_strap_selection(X, y, weights)
+        
+        mod = simple_tree()
+        mod.fit(bs_X, bs_y)
+        
+        # Note: Predicting on all values of X, NOT boot-strap
+        preds = mod.predict(X)
+        
+        epsilon = calc_epsilon(y, preds, weights) ### <------
+        alpha = calc_alpha(epsilon) ### <------
+        
+        # Note that the i+1-th model will be keyed to the int i,
+        # and will store a tuple of the fit model and the alpha value
+        est_dict[i] = (mod, alpha)
+        
+        weights = update_weights(weights, alpha, y, preds) ### <------
+    
+    return est_dict       
+      
+      
