@@ -568,7 +568,7 @@ def update_weights(weights, alpha, y_true, y_pred):
             
     y_true, y_pred = change_labels(y_true), change_labels(y_pred)
     w_hat = weights * np.exp(-alpha * y_true * y_pred)
-    return np.array([w_hat / sum(w_hat)])
+    return w_hat / sum(w_hat)
 
 y_true = np.array([1,0,1,1,0])
 y_pred = np.array([0,0,1,1,1])
@@ -616,7 +616,7 @@ def predict(X, est_dict):
     for i, (tree, alpha) in enumerate(est_dict.values()):
         total += alpha * change_labels(tree.predict(X), 0, -1)
         
-    return np.array([sign(total)])
+    return sign(total)
 
 ### Our example dataset, inspired from lecture
 pts = [[.5, 3,1],[1,2,1],[3,.5,0],[2,3,0],[3,4,1],
@@ -672,3 +672,169 @@ print(predict(X, tree_dict))
 # If tree2 splits on feature 0:
 # np.array([ 0.95  0.95 -0.25 -0.25 -0.25 -0.25 -0.25 -0.25 -0.95 -0.95])
 ###############################
+
+
+
+col_names = [
+"age", "workclass", "fnlwgt", "education",
+"education-num", "marital-status", "occupation", "relationship",
+"race", "sex", "capital-gain", "capital-loss", "hours-per-week",
+"native-country", "income"
+]
+
+data_path = "adult.data.txt"
+
+data = pd.read_csv(data_path, header = None, names = col_names)
+data.head()
+
+# Take a subset
+cols = ["age", "workclass", "education-num", "occupation", "sex", "hours-per-week", "income"]
+data = data[cols]
+data.head()
+
+from sklearn.preprocessing import OneHotEncoder
+
+ex_df = pd.DataFrame(
+    np.array([['b', 'a', 'c', 'a', 'c',], ["z","y","y","y","z"]]).T,
+    columns = ["beg","end"],
+    index = range(500,505))
+
+test_df = pd.DataFrame(
+    np.array([["c","b"],["y","y"]]).T,
+    columns = ["beg","end"],
+    index = [56,72])
+
+print("Initial DataFrame:")
+print(ex_df)
+
+print("\nTest df")
+print(test_df)
+
+# Instantiate OneHotEncoder
+# sparse = False means data will not be stored in sparse matrix
+ohe = OneHotEncoder(sparse = False)
+
+# Fitting OHE with the "training" data
+ohe.fit(ex_df)
+
+# Transforming the "training" dat
+tr_vals = ohe.transform(ex_df)
+
+print("\nTransformed values")
+print(tr_vals)
+
+print("\nCategories")
+print(ohe.categories_)
+
+# Creating column names from `.categories_`
+ohe_cats = np.concatenate(ohe.categories_)
+
+# In creation of new df. Note the use of np.concatenate
+final_df = pd.DataFrame(tr_vals, columns = ohe_cats)
+
+print("\nFinal DataFrame")
+print(final_df)
+
+# Putting everything together to transform test data
+print("\nTransformed test df")
+print(pd.DataFrame(ohe.transform(test_df), columns= ohe_cats))
+
+
+
+from sklearn.preprocessing import LabelEncoder
+
+# Create target Series
+target_train = pd.Series(np.random.choice(data['income'].unique(), size = 10))
+target_test = pd.Series(np.random.choice(data['income'].unique(), size = 5))
+print("Target Train Series")
+print(target_train)
+
+print("\nTarget Test Series")
+print(target_test)
+
+# Instantiate encoder
+le = LabelEncoder()
+
+# Fit with training data
+le.fit(target_train)
+
+# Transform training and test data
+trans_train = le.transform(target_train)
+trans_test = le.transform(target_test)
+
+print("Transformed training values")
+print(trans_train)
+
+print("\nTransformed test values")
+print(trans_test)
+
+print("\nLabelEncoder `.classes_`")
+print(le.classes_)
+
+
+
+def preprocess_census(X_train, X_test, y_train, y_test):
+
+    ### Hardcode variables which need categorical encoding
+    to_encode = ["workclass", "occupation", "sex"]
+
+    ### Find top categories in categorical columns
+    ### Used for dropping majority class to prevent multi-colinearity
+    top_categories = []
+
+    for col in to_encode:
+        top_categories.append(X_train[col].value_counts().index[0])
+
+    ### Create and fit one-hot encoder for categoricals  
+    OHE = OneHotEncoder(sparse = False)
+    OHE.fit(X_train[to_encode])
+
+    ## Create and fit Label encoder for target
+    LabEnc = LabelEncoder()
+    LabEnc.fit(y_train)
+
+    def create_encoded_df(X, to_encode = to_encode, OHE = OHE, top_categories = top_categories):
+        # Return columns which need encoding.
+        def return_encoded_cols(X, to_encode = to_encode, OHE = OHE, top_categories = top_categories):
+            # Use onehotencoder to transform.
+            # Use "categories" to name
+            toRet = pd.DataFrame(OHE.transform(X[to_encode]), columns = np.concatenate(OHE.categories_))
+
+            # Drop top_categories and return
+            return toRet.drop(top_categories, axis = 1)
+
+        # create encoded columns
+        ret_cols = return_encoded_cols(X)
+
+        # Drop columns that were encoded
+        dr_enc = X.drop(to_encode, axis = 1)
+
+        # Concatenate values
+        # use index from original data
+        # use combined column names
+        return pd.DataFrame(np.concatenate([ret_cols.values, dr_enc.values],axis = 1),
+                            index = dr_enc.index,
+                            columns = list(ret_cols.columns) + list(dr_enc.columns))
+
+
+    def encode_target(y, LabEnc = LabEnc):
+        # Use label encoder, and supply with original index
+        return pd.Series(LabEnc.transform(y), index= y.index)
+
+    return create_encoded_df(X_train), create_encoded_df(X_test), encode_target(y_train), encode_target(y_test)
+
+
+from sklearn.model_selection import train_test_split
+
+# Create training and testing sets; preprocess them.
+target = data['income']
+predictors = data.drop("income", axis = 'columns')
+
+X_train, X_test, y_train, y_test = preprocess_census(*train_test_split(predictors, target, test_size = .2))
+
+
+
+from sklearn.metrics import classification_report
+d = simple_adaboost_fit(X_train.values.copy(), y_train.values.copy(), 5)
+preds = predict(X_test, d)
+print(classification_report(y_test,preds))
