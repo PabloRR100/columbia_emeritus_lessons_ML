@@ -469,3 +469,15 @@ def simple_adaboost_fit(X,y, n_estimators):
     return est_dict       
       
       
+
+def default_weights(n):
+    """
+    Create the default list of weights, a numpy array of length n
+    with each value equal to 1/n        
+    """
+    return np.array([1/n for _ in range(n)])
+
+n = 10
+dw = default_weights(n)
+print(dw) #--> np.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+
