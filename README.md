@@ -7,3 +7,10 @@ The first half of the course will focus on supervised learning techniques for re
 
 In the second half of the course, we shift to unsupervised learning techniques. In unsupervised learning, the end goal is less clear-cut than predicting an output based on a corresponding input. We will cover three fundamental problems of unsupervised learning: data clustering, matrix factorization, and sequential models for order-dependent data. Some applications of these models include recommendation systems and topic modeling.  
 
+#### Methodology
+
+The course follow the book ["Machine Learning and Pattern Recognition", C. Bishop][bishop]
+
+
+
+[bishop]: http://users.isr.ist.utl.pt/~wurmd/Livros/school/Bishop%20-%20Pattern%20Recognition%20And%20Machine%20Learning%20-%20Springer%20%202006.pdf
