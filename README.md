@@ -14,24 +14,32 @@ The course follow the book ["Machine Learning and Pattern Recognition", C. Bisho
 ### Index
 
 1 - Regression   
+
 2 - Ridge Regression   
+
 3 - Bayesian Methods   
+
 4 - Foundational Classification Algorithms I   
   - kNN   
   - Perceptron   
+  
 5 - Foundational Classification Algorithms II   
   - Logistic Regression   
   - Kernel Methods and Gaussian Processes   
+
 6 - Indermediate Classifiers I    
   - SVM   
   - Trees: Bagging, Random Forest   
+
 7 - Indermediate Classifiers II    
   - Boosting   
   - k-Means Clustering   
+
 8 - Clustering Methods   
   - Expectation - Maximization   
   - Gaussian-Mixture Models   
-- 9 Recommendation System   
+
+9 Recommendation System   
   - Colaborative Filtering   
   - Topic Modelling   
 
