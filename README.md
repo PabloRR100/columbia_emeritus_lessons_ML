@@ -9,8 +9,33 @@ In the second half of the course, we shift to unsupervised learning techniques. 
 
 #### Methodology
 
-The course follow the book ["Machine Learning and Pattern Recognition", C. Bishop][bishop]
+The course follow the book ["Machine Learning and Pattern Recognition", C. Bishop][bishop]. Therefore, it cover an statistical approach of Machine Learning.
 
+### Index
+
+1 - Regression
+2 - Ridge Regression 
+3 - Bayesian Methods
+4 - Foundational Classification Algorithms I
+  - kNN
+  - Perceptron
+5 - Foundational Classification Algorithms II
+  - Logistic Regression
+  - Kernel Methods and Gaussian Processes
+6 - Indermediate Classifiers I 
+  - SVM
+  - Trees: Bagging, Random Forest
+7 - Indermediate Classifiers II 
+  - Boosting
+  - k-Means Clustering
+8 - Clustering Methods
+  - Expectation - Maximization
+  - Gaussian-Mixture Models
+- 9 Recommendation System
+  - Colaborative Filtering
+  - Topic Modelling
 
 
 [bishop]: http://users.isr.ist.utl.pt/~wurmd/Livros/school/Bishop%20-%20Pattern%20Recognition%20And%20Machine%20Learning%20-%20Springer%20%202006.pdf
+
+
