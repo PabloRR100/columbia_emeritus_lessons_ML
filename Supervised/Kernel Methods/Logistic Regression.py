@@ -241,7 +241,6 @@ def to_sum(x,y,w):
         y = -1
         w = np.array([.1,-.2])
         print(to_sum(x,y,w)) # --> array([-7.01756737e-05, -2.28833719e-04])
-    
     """    
     return np.dot((1 - sigmoid_single(x,y,w)) * y, x)
 
