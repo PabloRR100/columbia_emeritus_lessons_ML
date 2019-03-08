@@ -366,4 +366,23 @@ def generate_init_prob_dist(list_of_unique_states, **kwargs):
     return init_prob_dist
 
 
+# Create State Transition Priors
+# ------------------------------
+    
+# Make permutations of state transition (this len should match len(STATE_TRANS_PROBS))
+state_transitions_list = make_state_permutations(STATE_LIST)
+
+# Create transition matrix in form of dictionary
+state_transition_probs = {
+    trans: prob for trans, prob in zip(state_transitions_list, STATE_TRANS_PROBS)
+}
+state_transition_probs
+
+# Transform dictionary to be in tuple format
+#### - this format is required in the `generate_*` functions used later
+A_prior = dict_to_tuples(STATE_LIST, state_transition_probs)
+A_prior
+
+
+
 
