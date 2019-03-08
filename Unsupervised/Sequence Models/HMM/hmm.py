@@ -415,6 +415,10 @@ pi = generate_init_prob_dist(STATE_LIST, **pi__init)
 pi
 
 
+
+# EXPECTATION MAXIMIZATION ALGORITHM
+# -----------------------------------
+
 '''
 Finally, we need to create a data structure that will hold all of our 
 probability calculations until we are finished computing E Step
@@ -422,5 +426,277 @@ probability calculations until we are finished computing E Step
 For this task, we will take advantage of a powerful data structure 
 from the `collections` module: `namedtuple`.
 '''
+
+def generate_obs_data_structure(sequence):
+    #  sequence: 1D numpy array of observations
+    ObservationData = namedtuple(
+        'ObservationData',
+        ['prob_lst', 'highest_prob', 'highest_state']
+    )
+    return {index+1: ObservationData for index in np.arange(len(sequence)-1)}
+
+
+# STEP 1 -> Estimate Probabilities
+'''
+This step involves using the Forward-Backward algorithm to calculate the 
+probability of observing a sequence, given a set of HMM parameters
+'''
+
+# Enforce an Argument Signature on following function to prevent errors with **kwargs
+params = [Parameter('list_of_unique_states', Parameter.POSITIONAL_OR_KEYWORD),
+         Parameter('sequence', Parameter.POSITIONAL_OR_KEYWORD),
+         Parameter('A', Parameter.KEYWORD_ONLY, default=generate_state_trans_dict),
+         Parameter('B', Parameter.KEYWORD_ONLY, default=generate_emission_prob_dist),
+         Parameter('pi', Parameter.KEYWORD_ONLY, default=generate_init_prob_dist)]
+
+sig = Signature(params)
+
+def calculate_probabilities(list_of_unique_states, sequence, **kwargs):
+    
+    # enforce signature to ensure variable names
+    bound_values = sig.bind(list_of_unique_states, sequence, **kwargs)
+    bound_values.apply_defaults()
+
+    
+    # grab params that are left to default values
+    param_defaults = [(name, val) for name, val in bound_values.arguments.items() if callable(val)]
+    
+    # grab non-default params
+    set_params = [(name, val) for name, val in bound_values.arguments.items() if isinstance(val, dict)]
+    
+    # this will run if any default hmm parameters are used
+    if param_defaults:
+        for name, val in param_defaults:
+            if name == 'B':
+                B = val(list_of_unique_states, sequence)
+            elif name == 'A':
+                A = val(list_of_unique_states)
+            elif name == 'pi':
+                pi = val(list_of_unique_states)
+            else:
+                continue
+    
+    # this will run if kwargs are provided        
+    if set_params:
+        for name, val in set_params:
+            if name == 'B':
+                B = generate_emission_prob_dist(list_of_unique_states, sequence, **val)
+            elif name == 'A':
+                A = generate_state_trans_dict(list_of_unique_states, **val)
+            elif name == 'pi':
+                pi = generate_init_prob_dist(list_of_unique_states, **val)
+            else:
+                continue
+                
+    # instantiate the data structure
+    obs_probs = generate_obs_data_structure(sequence)
+
+    # all state transitions
+    state_perms = make_state_permutations(list_of_unique_states)
+
+    # for every transition from one observation to the next, calculate probability of going from Si to Sj
+    # loop through observations
+    for idx, obs in enumerate(sequence):
+
+        if idx != 0:  # check if this is the first observation
+            # instantiate the namedtuple for this observation
+            obs_probs[idx] = obs_probs[idx]([], [], [])
+
+            # loop through each possible state transition
+            for st in state_perms:
+                
+                # calculate prob of current obs for this state
+                prev_prob = pi[st[:2]] * B[st[:2]+'_'+str(sequence[idx-1])]
+
+                # calculate prob of previous obs for this state
+                curr_prob = A[st] * B[st[2:]+'_'+str(obs)]
+
+                # combine these two probabilities
+                combined_prob = round(curr_prob * prev_prob, 4)
+
+                # append probability to the list in namedtuple
+                obs_probs[idx].prob_lst.append(combined_prob)
+
+            # check for highest prob of observing that sequence
+            prob_and_state = _grab_highest_prob_and_state(state_perms, obs_probs[idx].prob_lst)
+            obs_probs[idx].highest_prob.append(prob_and_state[0])
+            obs_probs[idx].highest_state.append(prob_and_state[1])
+
+        else: # this is the first observation, exit loop.
+            continue
+    return (obs_probs, A, B, pi)
+
+
+ob_prob, A, B, pi = calculate_probabilities(STATE_LIST, corn13_17_seq, A=A_prior, B=B_prior, pi=pi)
+
+
+# STEP 2 -> Update Parameters
+
+# Update A: States transitions
+# This function sums all of the probabilities and 
+# outputs a new (un-normalized) state transition matrix
+def new_state_trans(STATE_LIST, probabilities):
+    state_perms = make_state_permutations(STATE_LIST)
+    sums_of_st_trans_prob = {p:0 for p in state_perms}
+    highest_prob_sum = 0
+    for obs in probabilities:
+        highest_prob_sum += probabilities[obs].highest_prob[0]
+        for i, p in enumerate(sums_of_st_trans_prob):
+            sums_of_st_trans_prob[p] += probabilities[obs].prob_lst[i]
+    
+    for key in sums_of_st_trans_prob:
+        sums_of_st_trans_prob[key] = sums_of_st_trans_prob[key] / highest_prob_sum
+    
+    # finally, normalize so the rows add up to 1
+    for s in STATE_LIST:
+        l = []
+        for k in sums_of_st_trans_prob:
+            if s == k[:2]:
+                l.append(sums_of_st_trans_prob[k])
+        for k in sums_of_st_trans_prob:
+            if s == k[:2]:
+                sums_of_st_trans_prob[k] = sums_of_st_trans_prob[k] / sum(l)
+    
+    return sums_of_st_trans_prob
+
+# Update and normalize posterior state transition
+A_posterior = new_state_trans(STATE_LIST, ob_prob)
+A_posterior
+
+# Convert state transition to "format 2" so it can be
+# used as input in the next iteration of "E" step
+A_posterior = dict_to_tuples(STATE_LIST, A_posterior)
+
+
+# Update B: emissions probabilities
+##### tally up all observed sequences
+def observed_pairs(sequence):
+    observed_pairs = []
+    for idx in range(len(sequence)-1):
+        observed_pairs.append((sequence[idx], sequence[idx+1]))
+    return observed_pairs
+
+def make_emission_permutations(sequence):
+    unique_e = np.unique(sequence)
+    return list(product(unique_e, repeat = 2))
+
+make_emission_permutations([1,1,0, 2])
+make_emission_permutations([0,1,0,3,0])
+
+def find_highest_with_state_obs(prob_pairs, state, obs):
+    for pp in prob_pairs:
+        if pp[0].count((state,obs))>0:
+            return pp[1]
+
+def normalize_emissions(b_tuple_format):
+    new_b_dict = {}
+    for key, val in b_tuple_format.items():
+        denominator = sum(val)
+        new_lst = [v/denominator for v in val]
+        new_b_dict[key] = tuple(new_lst)
+    return new_b_dict
+
+
+# we are ready to update the emission probabilities with the function below
+def emission_matrix_update(sequence, state_list, A, B, pi):
+    state_pairs = list(product(state_list, repeat = 2))
+    obs_pairs = observed_pairs(sequence)
+    
+    new_B = {}
+    for obs in np.unique(sequence): # For every unique emission
+        
+        # Find all the sequence-pairs that include that emission
+        inc_seq = [seq for seq in obs_pairs if seq.count(obs)>0]
+
+        # Collector for highest-probabilities
+        highest_pairs = []
+        
+        # For each sequence-pair that include that emission
+        for seq in inc_seq:
+
+            prob_pairs = []
+            
+            # Go through each potential pair of states
+            for state_pair in state_pairs:
+                
+                state1, state2 = state_pair
+                obs1, obs2 = seq
+                
+                # Match each state with it's emission
+                assoc_tuples = [(state1, obs1),
+                                (state2, obs2)]
+                
+                # Calculate the probability of the sequence from state
+                prob = pi[state1] * B[state1+"_"+str(obs1)]
+                prob *= A[state1+state2]*B[state2+"_"+str(obs2)]
+                prob = round(prob,5)
+                # Append the state emission tuples and probability
+                prob_pairs.append([assoc_tuples, prob])
+    
+            # Sort probabilities by maximum probability
+            prob_pairs = sorted(prob_pairs, key = lambda x: x[1], reverse = True)
+            
+            # Save the highest probability
+            to_add = {'highest':prob_pairs[0][1]}
+            # Find the highest probability where each state is associated
+            # With the current emission
+            for state in STATE_LIST:
+                
+                highest_of_state = 0
+                
+                # Go through sorted list, find first (state,observation) tuple
+                # save associated probability
+
+                for pp in prob_pairs:
+                    if pp[0].count((state,obs))>0:
+                        highest_of_state = pp[1]
+                        break
+                        
+                to_add[state] = highest_of_state
+            
+            # Save completed dictionary
+            highest_pairs.append(to_add)
+        
+        # Total highest_probability
+        highest_probability =sum([d['highest'] for d in highest_pairs])
+        
+        # Total highest probabilities for each state; divide by highest prob
+        # Add to new emission matrix
+        for state in STATE_LIST:
+            new_B[state+"_"+str(obs)]= sum([d[state] for d in highest_pairs])/highest_probability
+            
+        
+    return new_B
+
+nb = emission_matrix_update(corn13_17_seq,STATE_LIST, A,B,pi)
+nb
+
+#The emission probabilities are updated, but they need to be normalized. 
+#To do this, we will convert to dictionary to the `key: tuple` format and 
+#normalize so that the probabilities add up to 1.
+
+B_ = obs_to_tuples(STATE_LIST, nb, corn13_17_seq)
+B_posterior = normalize_emissions(B_)
+
+# normalized state transition posterior:
+A_posterior
+
+# normalized emission posterior probabilities
+B_posterior
+
+
+# STEP 3 -> Repeat until parameters convergence
+ob_prob2, A2, B2, pi2 = calculate_probabilities(STATE_LIST, corn13_17_seq, A=A_posterior, B=B_posterior, pi=pi)
+ob_prob2
+
+A_post2 = new_state_trans(STATE_LIST, ob_prob2)  # update and normalize state transition matrix again
+A_post2 = dict_to_tuples(STATE_LIST, A2)  # convert to `key: tuple` format
+A_post2
+
+# update emissions matrix again
+nb2 = emission_matrix_update(corn13_17_seq, STATE_LIST, A2, B2, pi)  # update emissions matrix again
+B_post2 = obs_to_tuples(STATE_LIST, nb2, corn13_17_seq)  # convert emission posterior to `key:tuples` format
+B_post2 = normalize_emissions(B_post2)  # normalize emissions probabilities
+B_post2
 
 
