@@ -7,8 +7,6 @@ Created on Thu Feb 28 13:14:15 2019
 
 import numpy as np
 
-
-
 ## PART 1 - CLUSTER ASSIGNMENT
 # 1.1 Hard assignment
 # 1.2 Soft assignment
@@ -48,7 +46,6 @@ print(cluster_weights) #--> np.array([[1, 0],
 #                                      [0, 1],
 #                                      [0, 1],
 #                                      [0, 1]])
-
 
 
 

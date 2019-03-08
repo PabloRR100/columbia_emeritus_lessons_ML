@@ -1,4 +1,4 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jan 22 08:48:41 2019
@@ -8,7 +8,6 @@ Created on Tue Jan 22 08:48:41 2019
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
 
 class Simple_Binary(object):
     
@@ -613,7 +612,7 @@ def predict(X, est_dict):
         return arr        
     
     total = 0    
-    for i, (tree, alpha) in enumerate(est_dict.values()):
+    for (tree, alpha) in est_dict.values():
         total += alpha * change_labels(tree.predict(X), 0, -1)
         
     return sign(total)
@@ -638,8 +637,8 @@ y2 = y[len(X)//2:]
 ### Fit classifiers to both sets of data, save to dictionary:
 
 ### Tree-creator helper function
-def simple_tree():
-    return DecisionTreeClassifier(criterion = 'entropy', max_depth= 1)
+# def simple_tree():
+#     return DecisionTreeClassifier(criterion = 'entropy', max_depth= 1)
     
 tree_dict = {}
 
