@@ -384,5 +384,43 @@ A_prior = dict_to_tuples(STATE_LIST, state_transition_probs)
 A_prior
 
 
+# Create Emission Priors
+# ----------------------
+# Manually initialize emission probabilities - in format 1
+B_format1 = {
+    'S1_0': 0.1,
+    'S1_1': 0.3,
+    'S1_2': 0.4,
+    'S1_3': 0.15,
+    'S1_4': 0.05,
+    'S2_0': 0.15,
+    'S2_1': 0.2,
+    'S2_2': 0.3,
+    'S2_3': 0.05,
+    'S2_4': 0.3
+}
+
+# Convert emission matrix to format 2
+B_format2 = obs_to_tuples(STATE_LIST, B_format1, corn13_17_seq)
+B_format2
+
+B_prior = obs_to_tuples(STATE_LIST, B_format1, corn13_17_seq)
+
+
+# Create initial state probability π
+# ----------------------------------
+
+pi__init = {'S1': 0.4 , 'S2': 0.6}
+pi = generate_init_prob_dist(STATE_LIST, **pi__init)
+pi
+
+
+'''
+Finally, we need to create a data structure that will hold all of our 
+probability calculations until we are finished computing E Step
+
+For this task, we will take advantage of a powerful data structure 
+from the `collections` module: `namedtuple`.
+'''
 
 
